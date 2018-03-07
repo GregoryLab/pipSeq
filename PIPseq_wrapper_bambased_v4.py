@@ -33,6 +33,8 @@ parser.add_argument('--ssRNase_only','-so', action='store_true', help='only perf
 parser.add_argument('--specify_out_dir','-spout', help="specify output dir (need path, use trailing '/')")
 parser.add_argument('--merge_reads','-mrg',action='store_true',help="call to merge timmed an untrimmed reads using wrapper, will make tophat_output_*_merged directories for you, if not using this must have sorted bam files (named 'NR_hits.bam')")
 parser.add_argument('--filter_bam','-f',help="input file to filter out reads in specified regions, should be .bed file of unwanted regions, specify entire path")
+parser.add_argument('--bamDir', '-b', default='./', help="Location of the directory containing the bam folders" )
+parser.add_argument('--scrDir', '-s', default='../../', help='locations of directory containing all necessary scripts')
 #args=parser.parse_args('Pp_dark trimmed /Data03/sgosai/annotation/pp/Ppatens_152_chr_len.txt'.split())
 args=parser.parse_args()
 
@@ -65,8 +67,7 @@ if args.merge_reads:
 		subprocess.check_call(['mkdir',make_this])
 
 # check that desired PIP-seq tophat_output directories are present
-bamDirList=os.listdir('./')
-bamDirStr='\n'.join(os.listdir('./'))
+bamDirStr='\n'.join(os.listdir(args.bamDir))
 if args.dsRNase_only:
 	findER=re.compile('^tophat_output_RD_'+args.alignment_tag+'_dsRNase_.*protein_'+args.trimming_status,re.MULTILINE)
 	expected_count=2
@@ -83,9 +84,7 @@ if len(inList) != expected_count:
 	raise ValueError("unexpected number of tophat_output_RD directories match specifications defined by args, make sure tophat_output_RD directories are named as follows: ./[unique_sample_tag]_(d/s)sRNase_(no/)protein_((un/)trimmed/merged)/, --help for more info")
 
 # set scripts directory
-scrPth=sys.argv[0].split('/')
-scrDir=('/'.join(scrPth[:(len(scrPth)-1)]))+'/'
-
+scrDir=args.scrDir
 # check for required scripts
 reqScr=['shuffle_reads_BAM.pl', 'split_coverage_by_chrom.pl', 'generate_empty_coverage_files.rb', 'make_CSAR_files.R', 'run_CSAR_shuffled.R', 'run_CSAR_saturation.R']
 havScr=os.listdir(scrDir)
@@ -122,7 +121,7 @@ print "Commence Death"
 # Get list of leading tages:
 bamHash={}
 for item in inList:
-	k=item.replace("tophat_output_RD_","").replace("_"+args.trimming_status,"")
+	k=args.bamDir +'/'+ item.replace("tophat_output_RD_","").replace("_"+args.trimming_status,"")
 	bamHash[k]=item
 
 # merge and sort .bam files if prompted
@@ -148,10 +147,10 @@ else:
 
 # Shuffle .tbl files
 if not args.ssRNase_only:
-	subprocess.check_call(['perl',scrDir+'shuffle_reads_BAM.pl','tophat_output_RD_'+args.alignment_tag+'_dsRNase_protein_'+args.trimming_status+'/'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_dsRNase_noprotein_'+args.trimming_status+'/'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_dsRNase_protein_'+args.trimming_status+'/shuffled_'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_dsRNase_noprotein_'+args.trimming_status+'/shuffled_'+set_bam+'.bam'])
+	subprocess.check_call(['perl',scrDir+'/shuffle_reads_BAM.pl',args.bamDir+'/tophat_output_RD_'+args.alignment_tag+'_dsRNase_protein_'+args.trimming_status+'/'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_dsRNase_noprotein_'+args.trimming_status+'/'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_dsRNase_protein_'+args.trimming_status+'/shuffled_'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_dsRNase_noprotein_'+args.trimming_status+'/shuffled_'+set_bam+'.bam'])
 
 if not args.dsRNase_only:
-	subprocess.check_call(['perl',scrDir+'shuffle_reads_BAM.pl','tophat_output_RD_'+args.alignment_tag+'_ssRNase_protein_'+args.trimming_status+'/'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_ssRNase_noprotein_'+args.trimming_status+'/'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_ssRNase_protein_'+args.trimming_status+'/shuffled_'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_ssRNase_noprotein_'+args.trimming_status+'/shuffled_'+set_bam+'.bam'])
+	subprocess.check_call(['perl',scrDir+'/shuffle_reads_BAM.pl',args.bamDir'/tophat_output_RD_'+args.alignment_tag+'_ssRNase_protein_'+args.trimming_status+'/'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_ssRNase_noprotein_'+args.trimming_status+'/'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_ssRNase_protein_'+args.trimming_status+'/shuffled_'+set_bam+'.bam','tophat_output_RD_'+args.alignment_tag+'_ssRNase_noprotein_'+args.trimming_status+'/shuffled_'+set_bam+'.bam'])
 
 # Calculate genome coverage for shuffled
 for tag,topDir in bamHash.items():
